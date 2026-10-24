@@ -21,6 +21,7 @@ subprojects {
     spotless {
         java {
             target 'src/main/java/**/*.java'
+            lineEndings 'UNIX'
             forbidWildcardImports()
             removeUnusedImports()
             palantirJavaFormat('2.102.0')

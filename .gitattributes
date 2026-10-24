@@ -1,6 +1,19 @@
-# Disable autocrlf on generated files, they always generate with LF
-# Add any extra files or paths here to make git stop saying they
-# are changed when only line endings change.
-src/generated/**/.cache/* text eol=lf
-src/generated/**/*.json text eol=lf
-tools/*.sh text eol=lf
+# Keep text files in the repository on LF so formatting checks are identical
+# on Windows, Linux, and CI. Windows launchers stay CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.java text eol=lf
+*.gradle text eol=lf
+*.gradle.kts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.png binary
+*.ogg binary
+*.nbt binary
+*.jar binary
+*.zip binary
