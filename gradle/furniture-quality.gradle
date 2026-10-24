@@ -1,0 +1,163 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import javax.imageio.ImageIO
+import groovy.io.FileType
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+
+// Review budgets for this project's small furniture, not universal Minecraft limits.
+// Deliberate exceptions require a documented profile before raising a budget.
+abstract class VerifyFurnitureAssets extends DefaultTask {
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getModelAssets()
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getBlockStateAssets()
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract DirectoryProperty getAuthoredTextures()
+
+    @OutputFile
+    abstract RegularFileProperty getReportFile()
+
+    private static List<File> filesWithExtension(File root, String suffix) {
+        def files = []
+        if (root.isDirectory()) {
+            root.eachFileRecurse(FileType.FILES) { if (it.name.endsWith(suffix)) files.add(it) }
+        }
+        return files.sort()
+    }
+
+    @TaskAction
+    void verify() {
+        File modelAssetsRoot = modelAssets.get().asFile
+        File blockStateAssetsRoot = blockStateAssets.get().asFile
+        File textures = authoredTextures.get().asFile
+        def parser = new JsonSlurper()
+        def models = []
+        def states = []
+        def images = []
+        def failures = []
+        // Count composite children too, including referenced child parents; a loader must not hide geometry from the budget.
+        Closure geometry
+        geometry = { Map model, Set visited ->
+            def result = new ArrayList(model.elements ?: [])
+            (model.children ?: [:]).values().each { child ->
+                def childModel = child
+                if (child.parent && child.parent.startsWith('stuff:') && !visited.contains(child.parent)) {
+                    File parent = new File(modelAssetsRoot, 'models/' + child.parent.substring(6) + '.json')
+                    if (parent.isFile()) childModel = parser.parse(parent) + child
+                }
+                result.addAll(geometry(childModel, visited + (child.parent ?: '')))
+            }
+            result
+        }
+        filesWithExtension(new File(modelAssetsRoot, 'models'), '.json').each { source ->
+            def model = parser.parse(source)
+            def authored = geometry(model, [] as Set)
+            int elements = authored.size()
+            int faces = authored.sum(0) { (it.faces ?: [:]).size() }
+            models << [path: modelAssetsRoot.toPath().relativize(source.toPath()).toString(), elements: elements, faces: faces]
+            if (elements > 64 || faces > 384) failures << "${source.name}: exceeds 64 cuboids / 384 authored faces"
+            if (source.name in ['bookshelf_lower.json', 'bookshelf_upper.json'] && !model.textures?.particle)
+                failures << "${source.name}: missing particle texture for break particles"
+            // Vanilla wood is 16px per block. Avoid squeezing the full tile onto thin legs or frame strips.
+            (model.elements ?: []).each { element ->
+                (element.faces ?: [:]).each { direction, face ->
+                    String texture = face.texture
+                    def seen = [] as Set
+                    while (texture?.startsWith('#') && seen.add(texture)) texture = model.textures?.get(texture.substring(1))
+                    if (texture && !texture.contains(':')) texture = 'minecraft:' + texture
+                    if (texture?.matches('stuff:block/furniture/(desk|chair|clock|record|worktable|bookshelf)_finish') && face.uv) {
+                        def size = (0..2).collect { axis -> Math.abs(element.to[axis] - element.from[axis]) }
+                        def width = direction in ['east', 'west'] ? size[2] : size[0]
+                        def height = direction in ['up', 'down'] ? size[2] : size[1]
+                        // Most finishes pack one texel per unit. The two-block bookshelf
+                        // case is a reviewed 2x atlas; its UV spans are unchanged but
+                        // each UV unit now covers 16 pixels instead of 8.
+                        boolean bookshelfFinish = texture == 'stuff:block/furniture/bookshelf_finish'
+                        int texelsPerUnit = bookshelfFinish ? 16 : 8
+                        int density = bookshelfFinish ? 2 : 1
+                        def uvWidth = Math.abs(face.uv[2] - face.uv[0]) * texelsPerUnit
+                        def uvHeight = Math.abs(face.uv[3] - face.uv[1]) * texelsPerUnit
+                        if (uvWidth > width * density + 1.01 || uvHeight > height * density + 1.01)
+                            failures << "${source.name}: ${direction} furniture patch exceeds its face texel budget"
+                        // A 1px strip stretched across a 7px post reads as flat stripes; require near-1:1 sampling.
+                        // For the bookshelf the target is near-2:1 because that atlas is 2x.
+                        // Allow one texel of fractional-face rounding, not a stretched strip.
+                        if (bookshelfFinish
+                                && (uvWidth + 1.01 < width * density || uvHeight + 1.01 < height * density))
+                            failures << "${source.name}: ${direction} undersamples face (uv ${uvWidth}x${uvHeight} for ${width}x${height} at ${density}x)"
+                    }
+                    if (texture?.matches('minecraft:block/(.*_planks|stripped_.*_log)') && face.uv) {
+                        def size = (0..2).collect { axis -> Math.abs(element.to[axis] - element.from[axis]) }
+                        def width = direction in ['east', 'west'] ? size[2] : size[0]
+                        def height = direction in ['up', 'down'] ? size[2] : size[1]
+                        if (width > 0 && height > 0 && (Math.abs(face.uv[2] - face.uv[0]) > width * 1.05 || Math.abs(face.uv[3] - face.uv[1]) > height * 1.05))
+                            failures << "${source.name}: ${direction} wood face exceeds one texel per model unit"
+                    }
+                }
+            }
+            if (model.render_type == 'minecraft:translucent') {
+                // Reviewed exception: five thin gray-glass panels, isolated from opaque furniture and chunk-baked when idle.
+                boolean lid = modelAssetsRoot.toPath().relativize(source.toPath()).toString().replace('\\', '/') == 'models/block/record_player/lid.json'
+                if (!lid || elements > 5 || faces > 22) failures << "${source.name}: translucent furniture exceeds the reviewed glass-lid scope"
+            }
+            if (source.parentFile.name == 'item' && model.display?.gui) {
+                def expected = source.name == 'oak_wall_clock.json' ? [0, 0, 0] : [30, 45, 0]
+                if ((model.display.gui.rotation ?: [0, 0, 0]) != expected) failures << "${source.name}: UI icon must show its authored +Z front"
+            }
+        }
+        filesWithExtension(new File(blockStateAssetsRoot, 'blockstates'), '.json').each { source ->
+            def state = parser.parse(source)
+            int entries = (state.variants ?: state.multipart ?: []).size()
+            states << [path: source.name, entries: entries]
+            if (entries > 128) failures << "${source.name}: exceeds 128 variant entries / multipart rules"
+        }
+        filesWithExtension(textures, '.png').each { source ->
+            def image = ImageIO.read(source)
+            if (image == null) throw new GradleException("Cannot decode texture: ${source}")
+            images << [path: textures.toPath().relativize(source.toPath()).toString(), width: image.width, height: image.height]
+            boolean existingGrille = textures.toPath().relativize(source.toPath()).toString().replace('\\', '/') == 'block/record_player/grille.png'
+            String relativeTexture = textures.toPath().relativize(source.toPath()).toString().replace('\\', '/')
+            // Packed face-sized patches retain ~one texel per model unit; atlas dimensions are not texel density.
+            // The two-block bookshelf case is a reviewed 2x atlas for its larger faces.
+            boolean furnitureAtlas = relativeTexture ==~ /block\/furniture\/(desk|chair|clock|record|worktable|bookshelf)_finish\.png/
+            boolean bookshelfAtlas = relativeTexture == 'block/furniture/bookshelf_finish.png'
+            int budget = bookshelfAtlas ? 256 : furnitureAtlas ? 128 : relativeTexture in ['block/furniture/clock_dial.png', 'block/furniture/bookshelf_books.png'] ? 64 : relativeTexture in ['misc/record_surface.png', 'misc/happy_days_record.png'] ? 32 : existingGrille ? 64 : 16
+            if (image.width > budget || image.height > budget) failures << "${source.name}: exceeds ${budget}x${budget} texture style budget"
+            image.flush()
+        }
+        if (models.empty || states.empty || images.empty) failures << 'Furniture assets missing; run runData first'
+        def destination = reportFile.get().asFile
+        destination.parentFile.mkdirs()
+        destination.text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                models: models, blockstates: states, textures: images,
+                note: 'Authored face counts, not measured GPU draw calls. Multipart rule counts are not state counts.',
+                failures: failures
+        ]))
+        if (!failures.empty) throw new GradleException("Furniture asset review failed:\n" + failures.join('\n'))
+        logger.lifecycle("Furniture asset review: ${models.size()} models, ${states.size()} blockstates, ${images.size()} textures")
+    }
+}
+
+tasks.register('verifyFurnitureAssets', VerifyFurnitureAssets) {
+    group = 'verification'
+    description = 'Checks authored texture and generated geometry budgets; writes an asset census.'
+    modelAssets.set(rootProject.layout.projectDirectory.dir('common/src/main/resources/assets/stuff'))
+    blockStateAssets.set(layout.projectDirectory.dir('src/generated/resources/assets/stuff'))
+    authoredTextures.set(rootProject.layout.projectDirectory.dir('common/src/main/resources/assets/stuff/textures'))
+    reportFile = layout.buildDirectory.file('reports/furniture/assets.json')
+}
+
+tasks.named('check') { dependsOn('verifyFurnitureAssets') }

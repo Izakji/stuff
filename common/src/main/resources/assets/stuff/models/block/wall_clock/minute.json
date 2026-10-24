@@ -1,0 +1,77 @@
+{
+    "textures":  {
+                     "particle":  "stuff:block/furniture/clock_finish",
+                     "finish":  "stuff:block/furniture/clock_finish",
+                     "dial":  "stuff:block/furniture/clock_dial"
+                 },
+    "elements":  [
+                     {
+                         "from":  [
+                                      7.75,
+                                      7.45,
+                                      2
+                                  ],
+                         "to":  [
+                                    8.25,
+                                    12,
+                                    2.1
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "uv":  [
+                                                                2.75,
+                                                                1.875,
+                                                                2.875,
+                                                                2.5
+                                                            ],
+                                                     "texture":  "#finish"
+                                                 },
+                                       "east":  {
+                                                    "uv":  [
+                                                               2.75,
+                                                               1.875,
+                                                               2.875,
+                                                               2.5
+                                                           ],
+                                                    "texture":  "#finish"
+                                                },
+                                       "south":  {
+                                                     "uv":  [
+                                                                2.75,
+                                                                1.875,
+                                                                2.875,
+                                                                2.5
+                                                            ],
+                                                     "texture":  "#finish"
+                                                 },
+                                       "west":  {
+                                                    "uv":  [
+                                                               2.75,
+                                                               1.875,
+                                                               2.875,
+                                                               2.5
+                                                           ],
+                                                    "texture":  "#finish"
+                                                },
+                                       "up":  {
+                                                  "uv":  [
+                                                             2,
+                                                             1.875,
+                                                             2.125,
+                                                             2
+                                                         ],
+                                                  "texture":  "#finish"
+                                              },
+                                       "down":  {
+                                                    "uv":  [
+                                                               2.375,
+                                                               1.875,
+                                                               2.5,
+                                                               2
+                                                           ],
+                                                    "texture":  "#finish"
+                                                }
+                                   }
+                     }
+                 ]
+}

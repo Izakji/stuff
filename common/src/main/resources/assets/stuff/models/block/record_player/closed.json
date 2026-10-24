@@ -1,0 +1,18 @@
+{
+  "children": {
+    "body": {
+      "parent": "stuff:block/record_player/closed_solid"
+    },
+    "glass": {
+      "parent": "stuff:block/record_player/lid"
+    }
+  },
+  "item_render_order": [
+    "body",
+    "glass"
+  ],
+  "loader": "neoforge:composite",
+  "textures": {
+    "particle": "minecraft:block/spruce_planks"
+  }
+}

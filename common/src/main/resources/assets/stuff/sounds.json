@@ -1,0 +1,5 @@
+{
+  "music_disc.happy_days": {
+    "sounds": [{ "name": "stuff:records/happy_days", "stream": true }]
+  }
+}

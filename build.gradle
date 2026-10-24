@@ -1,0 +1,65 @@
+plugins {
+    id 'com.diffplug.spotless' version '8.10.4' apply false
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+}
+
+allprojects {
+    group = mod_group_id
+    version = mod_version
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'com.diffplug.spotless'
+
+    repositories {
+        mavenCentral()
+    }
+
+    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+    spotless {
+        java {
+            target 'src/main/java/**/*.java'
+            forbidWildcardImports()
+            removeUnusedImports()
+            palantirJavaFormat('2.102.0')
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// Convenience aliases so the existing project commands keep working from the root.
+tasks.register('build') {
+    dependsOn ':common:build', ':neoforge:build'
+}
+tasks.register('spotlessApply') {
+    dependsOn ':common:spotlessApply', ':neoforge:spotlessApply'
+}
+tasks.register('spotlessCheck') {
+    dependsOn ':common:spotlessCheck', ':neoforge:spotlessCheck'
+}
+tasks.register('runData') {
+    dependsOn ':neoforge:runData'
+}
+tasks.register('runClient') {
+    dependsOn ':neoforge:runClient'
+}
+tasks.register('runServer') {
+    dependsOn ':neoforge:runServer'
+}
+tasks.register('runGameTestServer') {
+    dependsOn ':neoforge:runGameTestServer'
+}
+tasks.register('verifyFurnitureAssets') {
+    dependsOn ':neoforge:verifyFurnitureAssets'
+}

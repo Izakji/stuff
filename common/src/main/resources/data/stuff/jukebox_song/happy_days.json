@@ -1,0 +1,6 @@
+{
+  "sound_event": "stuff:music_disc.happy_days",
+  "description": { "translate": "jukebox_song.stuff.happy_days" },
+  "length_in_seconds": 184.6,
+  "comparator_output": 1
+}

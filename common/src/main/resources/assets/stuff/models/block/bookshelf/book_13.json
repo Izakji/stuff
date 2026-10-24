@@ -1,0 +1,76 @@
+{
+  "elements": [
+    {
+      "faces": {
+        "down": {
+          "texture": "#1",
+          "uv": [
+            5.0,
+            12.0,
+            8.0,
+            12.25
+          ]
+        },
+        "east": {
+          "texture": "#1",
+          "uv": [
+            5.0,
+            12.0,
+            8.0,
+            16.0
+          ]
+        },
+        "north": {
+          "texture": "#1",
+          "uv": [
+            5.0,
+            12.0,
+            8.0,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#1",
+          "uv": [
+            4.0,
+            12.0,
+            5.0,
+            16.0
+          ]
+        },
+        "up": {
+          "texture": "#1",
+          "uv": [
+            5.0,
+            12.0,
+            8.0,
+            12.25
+          ]
+        },
+        "west": {
+          "texture": "#1",
+          "uv": [
+            5.0,
+            12.0,
+            8.0,
+            16.0
+          ]
+        }
+      },
+      "from": [
+        -0.5,
+        0,
+        0
+      ],
+      "to": [
+        0.5,
+        4.2,
+        4
+      ]
+    }
+  ],
+  "textures": {
+    "0": "stuff:block/furniture/bookshelf_finish",
+    "1": "stuff:block/furniture/bookshelf_books"
+  }
+}
