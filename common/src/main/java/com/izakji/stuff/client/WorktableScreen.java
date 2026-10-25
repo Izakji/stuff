@@ -20,13 +20,6 @@ import net.minecraft.world.item.ItemStack;
  * @author Izakji
  */
 public final class WorktableScreen extends AbstractContainerScreen<WorktableMenu> {
-    // Original pixel silhouette: a broad striking face, claw, wooden handle, and dark grip.
-    private static final String[] HAMMER = {
-        "................", "...OOOOOOOO.....", "..OSSSSSSSSO....", ".OSHHSSSSSSSO...",
-        ".OSHHSSOOOSSO...", ".OSHHSSO..OSO...", "..OSSSO....OO...", "...OOOWO........",
-        ".....OWWO.......", "......OWWO......", ".......OWWO.....", "........OWGO....",
-        ".........OGGO...", "..........OGGO..", "...........OO...", "................"
-    };
     private static final int VISIBLE_ROWS = 6;
     private final List<CatalogueRow> rows = new ArrayList<>();
     private final List<AbstractButton> recipeButtons = new ArrayList<>();
@@ -80,9 +73,8 @@ public final class WorktableScreen extends AbstractContainerScreen<WorktableMenu
                                 !active ? 0xff655441 : isHoveredOrFocused() ? 0xff90673e : 0xff74502f);
                         g.fill(x + 1, y + 1, x + width - 1, y + 2, active ? 0xffb58b59 : 0xff82705a);
                         g.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, 0xff493320);
-                        drawHammer(g, x + 6, y + 2);
                         g.drawCenteredString(
-                                font, getMessage(), x + width / 2 + 6, y + 6, active ? 0xffffedcf : 0xffb7a38b);
+                                font, getMessage(), x + width / 2, y + 6, active ? 0xffffedcf : 0xffb7a38b);
                     }
                 });
         refreshRows();
@@ -144,21 +136,6 @@ public final class WorktableScreen extends AbstractContainerScreen<WorktableMenu
             };
             recipeButtons.add(addRenderableWidget(button));
         }
-    }
-
-    private static void drawHammer(GuiGraphics graphics, int x, int y) {
-        for (int row = 0; row < HAMMER.length; row++)
-            for (int col = 0; col < HAMMER[row].length(); col++) {
-                int color = switch (HAMMER[row].charAt(col)) {
-                    case 'O' -> 0xff242423;
-                    case 'S' -> 0xff858b89;
-                    case 'H' -> 0xffc1c4bb;
-                    case 'W' -> 0xffc09153;
-                    case 'G' -> 0xff41413c;
-                    default -> 0;
-                };
-                if (color != 0) graphics.fill(x + col, y + row, x + col + 1, y + row + 1, color);
-            }
     }
 
     @Override

@@ -205,8 +205,10 @@ public class StudioDeskBlock extends BaseEntityBlock {
                 shape,
                 box(edge, 0, 1, edge + 2, 15, 3),
                 box(edge, 0, 13, edge + 2, 15, 15),
-                box(edge + .25, 5, 3, edge + 1.75, 14, 13),
-                box(0, 6, 1.5, 16, 14.5, 2.5));
+                box(edge + .25, 5, 3, edge + 1.75, 14, 13));
+        // The split back panel stops short of the outer side; a full-width box
+        // would leave an invisible corner in the selection outline on each half.
+        shape = Shapes.or(shape, box(right ? 0 : 3, 6, 1.5, right ? 13 : 16, 14.5, 2.5));
         if (!right) shape = Shapes.or(shape, box(11, 5, 2.5, 12, 15, 15));
         for (Drawer drawer : Drawer.values()) {
             Drawer.FrontFace face = drawer.frontFace();
